@@ -1,15 +1,21 @@
-local P = {} -- package
+-- lua package boilerplate, ignore this
+local P = {}
 if _REQUIREDNAME == nil then
 	commander = P
 else
 	_G[_REQUIREDNAME] = P
 end
 setfenv(1, P)
+-- done ignoring
 
+-- the full set of commands available
 commands = {}
 
+-- a temporary placeholder for the concept of having a callback on 
+-- execution of a command
 function doNothing(...) end
 
+-- this function will create an argument to a command
 function createArg(name, description, args)
 	local comarg = {}
 	comarg.name = name
@@ -18,6 +24,7 @@ function createArg(name, description, args)
 	return comarg
 end
 
+-- this function will create a command
 function addCommand(name, description, func, args)
 	local com_index = #commands+1
 	commands[com_index] = {}
@@ -27,8 +34,20 @@ function addCommand(name, description, func, args)
 	commands[com_index].args = args
 end
 
+-- this function initializes the list of commands by creating each one
 function init()
-	-- return "parsed!"
+	-- by calling add command and daisy chaining as many 'createArg' calls as we want into the 'args' table
+	-- for a command, we can create any number of variations
+	-- ip supports
+	-- ip stat
+	-- ip enable
+	-- ip shut
+	-- ip set <number>
+	-- which includes things like
+	-- ip set 11234
+	-- ip set 24152543321
+	-- ip set 25
+	-- obviously a macro could be created for IP address that just accepts proper IP addresses
 	addCommand("ip", "configure the internet", doNothing,{
 		createArg("stat", "status of the internet", {}),
 		createArg("enable", "enable the internet", {}),
@@ -45,10 +64,10 @@ function init()
 	})
 	addCommand("internet", "alter the internet", doNothing, {
 		createArg("website", "disable a website", {
-			createArg("<string>", "the IP address or domain name of the targeted website", {})
+			createArg("<string>", "the IP address or domain name of the targeted website", {}) -- <string> is any no-whitespace word
 		}),
 		createArg("restart", "reboot the internet", {
-			createArg("<cr>", "reboot the internet now", {}),
+			createArg("<cr>", "reboot the internet now", {}), -- <cr> means you could early-terminate this command with a stroke of the enter key
 			createArg("<number>", "specify in how many seconds the internet should be rebooted", {})
 		})
 	})

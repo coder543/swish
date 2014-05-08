@@ -1,21 +1,24 @@
+-- check if a string starts with a substring
 function string.starts(String,Start)
    return string.sub(String,1,string.len(Start))==Start
 end
 
+-- initializes swish
 function init()
-	local hfile = io.open("ncurses.hh", "rb")
-	local hfilecontent = hfile:read("*all")
-	hfile:close()
-	ffi = require("ffi")
-	ffi.cdef(hfilecontent)
-	nc = ffi.load("ncurses")
-	termwin = nc.initscr()
-	commander = require("commander")
-	commander.init()
-	nc.noecho()
+	local hfile = io.open("ncurses.hh", "rb") -- let's open up ncurses.hh
+	local hfilecontent = hfile:read("*all") -- read it all into memory
+	hfile:close() -- close the file
+	ffi = require("ffi") -- import the LuaJIT ffi (foreign function interface)
+	ffi.cdef(hfilecontent) -- declare all of our C interfaces based on ncurses.hh
+	nc = ffi.load("ncurses") -- load the ncurses library (libncurses.so) into 'nc'
+	termwin = nc.initscr() -- initialize the ncurses window
+	commander = require("commander") -- import commander.lua as commander
+	commander.init() -- initialize all of the commands
+	nc.noecho() -- turn off echoing in ncurses (keystrokes only print if we print them)
 	-- walktree(commander.commands, "--")
 end
 
+-- utility functions to walk a tree of commands
 -- function walkargtree(tree, marker)
 -- 	if next(tree) == nil then 
 -- 		return
@@ -41,6 +44,7 @@ end
 -- 	end
 -- end
 
+-- waits until enter key is pressed, ignoring all other input
 function getenter()
 	local cur = nc.getch()
 	nc.printw("" .. cur)
@@ -99,33 +103,37 @@ function getword(acdict)
 	return commandstr
 end
 
+-- this function is responsible for all high level logic in swish
 function inputloop()
 	local command
 	while true do
 		nc.printw("# ")
 		nc.refresh()
-		command = getword({"hello", "exit", "extreme"})
-		if (getenter() == false) then
-			local curx = nc.getcurx(termwin) - #command
-			nc.wmove(termwin, nc.getcury(termwin), curx)
-			local erase_i = 0
-			while erase_i < #command do
-				nc.printw(" ")
+		command = getword({"hello", "exit", "extreme"}) -- we really need to pass the current word in the commands dictionary
+		if (getenter() == false) then -- false means they backspaced
+			-- let's erase the last word
+			local curx = nc.getcurx(termwin) - #command -- calculate cursor location to location - word length
+			nc.wmove(termwin, nc.getcury(termwin), curx) -- set the cursor location
+			local erase_i = 0 -- loop counter to keep up with erasure
+			while erase_i < #command do -- loop until erased
+				nc.printw(" ") -- erase each letter
 			end
-			nc.wmove(termwin, nc.getcury(termwin), curx)
-			command = ""
+			nc.wmove(termwin, nc.getcury(termwin), curx) -- move back to the beginning of the now-erased word
+			command = "" -- empty the word
 		end
-		nc.refresh()
+		nc.refresh() -- refresh the terminal (not always needed)
 		if command == "exit" then
-			break
+			break -- breaking the loop means ending the program
 		end
 	end
 end
 
+-- cleanup swish and the terminal here
 function cleanup()
-	nc.endwin()
+	nc.endwin() -- exit ncurses mode
 end
 
-init()
-inputloop()
-cleanup()
+init() -- call the init function
+inputloop() -- then do an input loop while the user has input to give
+cleanup() -- then cleanup
+
