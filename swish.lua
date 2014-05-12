@@ -216,6 +216,31 @@ function clearHelpText(ymod)
 
 end
 
+function showHelp(command, nextwords, lastHelp, canReturn)
+	-- now let's rewrite the help text
+	local cury = nc.getcury(termwin) + 1 -- calculate cursor location to location + one line
+	local curx = nc.getcurx(termwin) -- remember current x location
+	nc.wmove(termwin, cury, 0) -- set the cursor location to beginning of help box
+	if #command > 0 then
+		nc.printw("| arguments: ")
+	else
+		nc.printw("| commands: ")
+	end
+	-- now, we're going to write out the list of accepted words
+	-- first, handle the special case of canReturn
+	if canReturn or #nextwords == 0 then
+		nc.printw("<cr> ")
+	end
+	-- next, loop over all of the autocorrect words
+	for i,v in ipairs(nextwords) do
+		nc.printw(v .. " ") -- and print them
+	end
+	if #command > 0 then
+		nc.printw("\n| " .. command[#command] .. ": " .. lastHelp .. "\n") -- print command help text
+	end
+	nc.wmove(termwin, cury-1, curx) -- reset the cursor location where we found it
+end
+
 -- this function is responsible for all high level logic in swish
 function docommand()
 	local command = {} -- this will be an array of all words in the command
@@ -228,6 +253,8 @@ function docommand()
 			os.exit()
 		end
 		if #nextwords < 1 then -- if we don't have any autocorrect words, we must be at the end of a command string
+			clearHelpText(0) -- clear the help text
+			showHelp(command, nextwords, lastHelp, canReturn)
 			if getenter() == false then -- let's wait for enter keystroke, but if they hit backspace
 				eraseLastWord(command) -- then erase the last word of the command
 			else -- otherwise, we're clear to execute the command
@@ -237,23 +264,7 @@ function docommand()
 			end
 		elseif command[index] ~= nil then -- if the last command isn't nil
 			clearHelpText(0) -- clear the help text
-
-			-- now let's rewrite the help text
-			local cury = nc.getcury(termwin) + 1 -- calculate cursor location to location + one line
-			local curx = nc.getcurx(termwin) -- remember current x location
-			nc.wmove(termwin, cury, 0) -- set the cursor location to beginning of help box
-			nc.printw("| arguments: ")
-			-- now, we're going to write out the list of accepted words
-			-- first, handle the special case of canReturn
-			if canReturn then
-				nc.printw("<cr> ")
-			end
-			-- next, loop over all of the autocorrect words
-			for i,v in ipairs(nextwords) do
-				nc.printw(v .. " ") -- and print them
-			end
-			nc.printw("\n| " .. command[#command] .. ": " .. lastHelp .. "\n") -- print command help text
-			nc.wmove(termwin, cury-1, curx) -- reset the cursor location where we found it
+			showHelp(command, nextwords, lastHelp, canReturn)
 
 			-- now it is time to wait for some whitespace
 			local wsinput
@@ -272,22 +283,7 @@ function docommand()
 				return -- return and await next command
 			end
 		else
-
-			-- now let's rewrite the help text for the initial command
-			local cury = nc.getcury(termwin) + 1 -- calculate cursor location to location + one line
-			local curx = nc.getcurx(termwin) -- remember current x location
-			nc.wmove(termwin, cury, 0) -- set the cursor location to beginning of help box
-			nc.printw("| commands: ")
-			-- now, we're going to write out the list of accepted words
-			-- first, handle the special case of canReturn
-			if canReturn then
-				nc.printw("<cr> ")
-			end
-			-- next, loop over all of the autocorrect words
-			for i,v in ipairs(nextwords) do
-				nc.printw(v .. " ") -- and print them
-			end
-			nc.wmove(termwin, cury-1, curx) -- reset the cursor location where we found it
+			showHelp(command, nextwords, lastHelp, canReturn)
 		end
 
 		command[index] = getword(nextwords, canReturn)
