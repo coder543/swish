@@ -3,6 +3,15 @@ function string.starts(String,Start)
    return string.sub(String,1,string.len(Start))==Start
 end
 
+function table.contains(table, element)
+  for _, value in pairs(table) do
+    if value == element then
+      return true
+    end
+  end
+  return false
+end
+
 -- initializes swish
 function init()
 	local hfile = io.open("ncurses.hh", "rb") -- let's open up ncurses.hh
@@ -47,12 +56,12 @@ end
 -- waits until enter key is pressed, ignoring all other input
 function getenter()
 	local cur = nc.getch()
-	-- nc.printw("" .. cur)
+	nc.printw("" .. cur)
 	while not (cur == string.byte("\n") or cur == 127) do
 		cur = nc.getch()
-		-- nc.printw("" .. cur)
+		nc.printw("" .. cur)
 	end
-	if (cur == 127) then
+	if cur == 127 then
 		nc.printw("backspace!")
 		return false
 	else
@@ -61,23 +70,67 @@ function getenter()
 	end
 end
 
+-- waits until space key is pressed, ignoring all other input
+function getspace()
+	local cur = nc.getch()
+	-- nc.printw("" .. cur)
+	while not (cur == string.byte(" ") or cur == 127) do
+		cur = nc.getch()
+		-- nc.printw("" .. cur)
+	end
+	if cur == 127 then
+		nc.printw("backspace!")
+		return false
+	else
+		nc.printw(" ")
+		return " "
+	end
+end
+
+-- waits until space key or enter key is pressed, ignoring all other input
+function getenterorspace()
+	local cur = nc.getch()
+	-- nc.printw("" .. cur)
+	while not (cur == string.byte(" ") or cur == string.byte("\n") or cur == 127) do
+		cur = nc.getch()
+		-- nc.printw("" .. cur)
+	end
+	if cur == 127 then
+		nc.printw("backspace!")
+		return false
+	elseif cur == string.byte(" ") then
+		nc.printw(" ")
+		return " "
+	elseif cur == string.byte("\n") then
+		nc.printw("\n")
+		return "\n"
+	end
+end
+
 -- accepts an autocomplete dictionary,
 -- just an array of acceptable words
 function getword(acdict)
 	local commandstr = ""
 	local curDict = {}
+	local arbNum = table.contains(acdict, "<number>")
+	local arbStr = table.contains(acdict, "<string>")
 	while true do
 		local nchar = nc.getch()
 
 		compstring = commandstr
-		if nchar == 127 then
-			commandstr = string.sub(commandstr,1,-2)
-			local curx = nc.getcurx(termwin) - 1
-			if curx < 0 then
-				curx = 0
+		if nchar == 127 then 
+			if #commandstr > 0 then
+				commandstr = string.sub(commandstr,1,-2)
+				local curx = nc.getcurx(termwin) - 1
+				if curx < 0 then
+					curx = 0
+				end
+				nc.wmove(termwin, nc.getcury(termwin), curx)
+				nc.wdelch(termwin)
 			end
-			nc.wmove(termwin, nc.getcury(termwin), curx)
-			nc.wdelch(termwin)
+		elseif nchar == string.byte("<") then
+			-- special string detected, ignore	
+			nchar = 127
 		else
 			compstring = compstring .. string.char(nchar)
 		end
@@ -85,7 +138,7 @@ function getword(acdict)
 
 		curDict = {}
 		for i,v in ipairs(acdict) do
-			if (v:starts(compstring)) then
+			if v:starts(compstring) then
 				curDict[#curDict+1] = v
 			end
 		end
@@ -103,32 +156,152 @@ function getword(acdict)
 	return commandstr
 end
 
--- this function is responsible for all high level logic in swish
-function inputloop()
-	local command
-	while true do
-		nc.printw("# ")
-		nc.refresh()
-		command = getword({"hello", "exit", "extreme"}) -- we really need to pass the current word in the commands dictionary
-		if (getenter() == false) then -- false means they backspaced
-			-- let's erase the last word
-			local curx = nc.getcurx(termwin) - #command -- calculate cursor location to location - word length
-			nc.wmove(termwin, nc.getcury(termwin), curx) -- set the cursor location
-			local erase_i = 0 -- loop counter to keep up with erasure
-			while erase_i < #command do -- loop until erased
-				nc.printw(" ") -- erase each letter
+function getcmdwords(curcommand)
+	local curspot = commander.commands
+	local found = false
+	local lastHelp = ""
+	for i=1,#curcommand do
+		for j,v in ipairs(curspot) do
+			if curcommand[i] == v.name then
+				curspot = v.args
+				lastHelp = v.description
+				found = true
 			end
-			nc.wmove(termwin, nc.getcury(termwin), curx) -- move back to the beginning of the now-erased word
-			command = "" -- empty the word
 		end
-		nc.refresh() -- refresh the terminal (not always needed)
-		if command == "exit" then
-			break -- breaking the loop means ending the program
+		if not found then
+			if curcommand[i] == nil then
+				nc.printw("Nil command string passed!\n")
+			else
+				nc.printw("Error, invalid command string! " .. #curcommand .. "\n")
+			end
+			-- for j,v in ipairs(curspot) do
+			-- 	print(j,v.name,"\n")
+			-- end
+			-- return {}, false, "", true
 		end
+	end
+	local returnwords = {}
+	local canReturn = false
+	for i,v in ipairs(curspot) do
+		if v.name == "<cr>" then
+			canReturn = true
+		else
+			returnwords[#returnwords+1] = v.name
+		end
+	end
+	return returnwords, canReturn, lastHelp, false
+end
+
+function eraseLastWord(curcommand)
+		-- let's erase the last word
+	local curx = nc.getcurx(termwin) - #curcommand[#curcommand] -- calculate cursor location to location - word length
+	nc.wmove(termwin, nc.getcury(termwin), curx) -- set the cursor location
+	local erase_i = 0 -- loop counter to keep up with erasure
+	while erase_i < #curcommand[#curcommand] do -- loop until erased
+		nc.printw(" ") -- erase each letter
+	end
+	nc.wmove(termwin, nc.getcury(termwin), curx) -- move back to the beginning of the now-erased word
+	table.remove(curcommand, #curcommand) -- remove last word
+end
+
+function clearHelpText(ymod)
+
+	local cury = nc.getcury(termwin) + 1 - ymod -- calculate cursor location to location + one line
+	local curx = nc.getcurx(termwin)
+	nc.wmove(termwin, cury, 0) -- set the cursor location
+	nc.wclrtoeol(termwin)
+	nc.wmove(termwin, cury + 1, 0) -- set the cursor location
+	nc.wclrtoeol(termwin)
+	nc.wmove(termwin, cury - 1 + ymod, curx)
+
+end
+
+-- this function is responsible for all high level logic in swish
+function docommand()
+	local command = {} -- this will be an array of all words in the command
+	nc.printw("# ") -- let's print a prompt
+	nc.refresh() -- refresh the screen
+	local index = 1 -- current index in command array
+	while true do -- loop infinitely, receiving more arguments for the command
+		local nextwords, canReturn, lastHelp, err = getcmdwords(command) -- get autocorrect options
+		if err == true then -- there was some kind of error, abort! abort!
+			os.exit()
+		end
+		if #nextwords < 1 then -- if we don't have any autocorrect words, we must be at the end of a command string
+			if getenter() == false then -- let's wait for enter keystroke, but if they hit backspace
+				eraseLastWord(command) -- then erase the last word of the command
+			else -- otherwise, we're clear to execute the command
+				-- callCommand(command) -- run it!
+				clearHelpText(1) -- clear the help text
+				return -- return and await next command
+			end
+		elseif command[index] ~= nil then -- if the last command isn't nil
+			clearHelpText(0) -- clear the help text
+
+			-- now let's rewrite the help text
+			local cury = nc.getcury(termwin) + 1 -- calculate cursor location to location + one line
+			local curx = nc.getcurx(termwin) -- remember current x location
+			nc.wmove(termwin, cury, 0) -- set the cursor location to beginning of help box
+			nc.printw("| arguments: ")
+			-- now, we're going to write out the list of accepted words
+			-- first, handle the special case of canReturn
+			if canReturn then
+				nc.printw("<cr> ")
+			end
+			-- next, loop over all of the autocorrect words
+			for i,v in ipairs(nextwords) do
+				nc.printw(v .. " ") -- and print them
+			end
+			nc.printw("\n| " .. command[#command] .. ": " .. lastHelp .. "\n") -- print command help text
+			nc.wmove(termwin, cury-1, curx) -- reset the cursor location where we found it
+
+			-- now it is time to wait for some whitespace
+			local wsinput
+			if canReturn == true then
+				wsinput = getenterorspace()
+			else
+				wsinput = getspace()
+			end
+			if wsinput == false then -- false means they backspaced
+				eraseLastWord(command)
+			elseif wsinput == " " then
+				index = index + 1 -- increment the location in the command
+			else -- otherwise, we're clear to execute the command
+				-- callCommand(command) -- run it!
+				clearHelpText(1) -- clear the help text
+				return -- return and await next command
+			end
+		else
+
+			-- now let's rewrite the help text for the initial command
+			local cury = nc.getcury(termwin) + 1 -- calculate cursor location to location + one line
+			local curx = nc.getcurx(termwin) -- remember current x location
+			nc.wmove(termwin, cury, 0) -- set the cursor location to beginning of help box
+			nc.printw("| commands: ")
+			-- now, we're going to write out the list of accepted words
+			-- first, handle the special case of canReturn
+			if canReturn then
+				nc.printw("<cr> ")
+			end
+			-- next, loop over all of the autocorrect words
+			for i,v in ipairs(nextwords) do
+				nc.printw(v .. " ") -- and print them
+			end
+			nc.wmove(termwin, cury-1, curx) -- reset the cursor location where we found it
+		end
+
+		command[index] = getword(nextwords, canReturn)
 	end
 end
 
--- cleanup swish and the terminal here
+-- this function simply keeps swish ready to accept more commands
+function inputloop()
+	while true do
+		docommand()
+	end
+end
+
+-- cleanup swish and the terminal here	
 function cleanup()
 	nc.endwin() -- exit ncurses mode
 end
