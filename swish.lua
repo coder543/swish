@@ -118,7 +118,7 @@ function getword(acdict)
 		local nchar = nc.getch()
 
 		compstring = commandstr
-		if nchar == 127 then 
+		if nchar == 127 then
 			if #commandstr > 0 then
 				commandstr = string.sub(commandstr,1,-2)
 				local curx = nc.getcurx(termwin) - 1
@@ -135,23 +135,37 @@ function getword(acdict)
 			compstring = compstring .. string.char(nchar)
 		end
 		-- nc.printw("" .. nchar)
-
-		curDict = {}
-		for i,v in ipairs(acdict) do
-			if v:starts(compstring) then
-				curDict[#curDict+1] = v
-			end
-		end
-		if #curDict == 1 then
-			nc.printw(string.sub(curDict[1], #commandstr + 1))
-			return curDict[1]
-		elseif #curDict > 1 then
-			if nchar ~= 127 then
+		if arbStr == true then
+			if nchar == string.byte(" ") then
+				break
+			elseif nchar ~= 127 and nchar ~= string.byte("\n") then
 				nc.printw(string.char(nchar))
 				commandstr = commandstr .. string.char(nchar)
 			end
+		elseif arbNum == true then
+			if nchar >= string.byte("0") and nchar <= string.byte("9") then
+				nc.printw(string.char(nchar))
+				commandstr = commandstr .. string.char(nchar)
+			elseif nchar == string.byte(" ") then
+				break
+			end
+		else
+			curDict = {}
+			for i,v in ipairs(acdict) do
+				if v:starts(compstring) then
+					curDict[#curDict+1] = v
+				end
+			end
+			if #curDict == 1 then
+				nc.printw(string.sub(curDict[1], #commandstr + 1))
+				return curDict[1]
+			elseif #curDict > 1 then
+				if nchar ~= 127 then
+					nc.printw(string.char(nchar))
+					commandstr = commandstr .. string.char(nchar)
+				end
+			end
 		end
-
 	end
 	return commandstr
 end
