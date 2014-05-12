@@ -62,7 +62,6 @@ function getenter()
 		-- nc.printw("" .. cur)
 	end
 	if cur == 127 then
-		nc.printw("backspace!")
 		return false
 	else
 		nc.printw("\n")
@@ -79,7 +78,6 @@ function getspace()
 		-- nc.printw("" .. cur)
 	end
 	if cur == 127 then
-		nc.printw("backspace!")
 		return false
 	else
 		nc.printw(" ")
@@ -96,7 +94,6 @@ function getenterorspace()
 		-- nc.printw("" .. cur)
 	end
 	if cur == 127 then
-		nc.printw("backspace!")
 		return false
 	elseif cur == string.byte(" ") then
 		nc.printw(" ")
@@ -127,6 +124,8 @@ function getword(acdict)
 				end
 				nc.wmove(termwin, nc.getcury(termwin), curx)
 				nc.wdelch(termwin)
+			else
+				return false
 			end
 		elseif nchar == string.byte("<") then
 			-- special string detected, ignore	
@@ -188,9 +187,6 @@ function getcmdwords(curcommand)
 			else
 				nc.printw("Error, invalid command string! " .. #curcommand .. "\n")
 			end
-			-- for j,v in ipairs(curspot) do
-			-- 	print(j,v.name,"\n")
-			-- end
 			return {}, false, "", true
 		end
 	end
@@ -207,14 +203,15 @@ function getcmdwords(curcommand)
 end
 
 function eraseLastWord(curcommand)
-		-- let's erase the last word
-	local curx = nc.getcurx(termwin) - #curcommand[#curcommand] -- calculate cursor location to location - word length
-	nc.wmove(termwin, nc.getcury(termwin), curx) -- set the cursor location
+	-- let's erase the last word
+	local curx = nc.getcurx(termwin) -- calculate cursor location to location - word length
 	local erase_i = 0 -- loop counter to keep up with erasure
 	while erase_i < #curcommand[#curcommand] do -- loop until erased
-		nc.printw(" ") -- erase each letter
+		nc.wmove(termwin, nc.getcury(termwin), curx - erase_i - 1) -- set the cursor location
+		nc.wdelch(termwin) -- delete the character
+		erase_i = erase_i + 1
 	end
-	nc.wmove(termwin, nc.getcury(termwin), curx) -- move back to the beginning of the now-erased word
+	nc.refresh()
 	table.remove(curcommand, #curcommand) -- remove last word
 end
 
@@ -271,12 +268,14 @@ function docommand()
 			showHelp(command, nextwords, lastHelp, canReturn)
 			if getenter() == false then -- let's wait for enter keystroke, but if they hit backspace
 				eraseLastWord(command) -- then erase the last word of the command
+				nextwords, canReturn, lastHelp, err = getcmdwords(command) -- get autocorrect options
+				showHelp(command, nextwords, lastHelp, canReturn)
 			else -- otherwise, we're clear to execute the command
 				-- callCommand(command) -- run it!
 				clearHelpText(1) -- clear the help text
 				return -- return and await next command
 			end
-		elseif command[index] ~= nil then -- if the last command isn't nil
+		elseif command[index] ~= nil then -- if the command has already been specified
 			clearHelpText(0) -- clear the help text
 			showHelp(command, nextwords, lastHelp, canReturn)
 
@@ -289,6 +288,9 @@ function docommand()
 			end
 			if wsinput == false then -- false means they backspaced
 				eraseLastWord(command)
+				nextwords, canReturn, lastHelp, err = getcmdwords(command) -- get autocorrect options
+				clearHelpText(0) -- clear the help text
+				showHelp(command, nextwords, lastHelp, canReturn)
 			elseif wsinput == " " then
 				index = index + 1 -- increment the location in the command
 			else -- otherwise, we're clear to execute the command
@@ -296,11 +298,18 @@ function docommand()
 				clearHelpText(1) -- clear the help text
 				return -- return and await next command
 			end
-		else
+		else -- show help for initial word (aka. command, not argument)
+			clearHelpText(0) -- clear the help text
 			showHelp(command, nextwords, lastHelp, canReturn)
 		end
 
 		command[index] = getword(nextwords, canReturn)
+		if command[index] == false then
+			command[index] = nil
+			command[index - 1] = command[index - 1] .. " "
+			index = index - 1
+			eraseLastWord(command)
+		end
 	end
 end
 
