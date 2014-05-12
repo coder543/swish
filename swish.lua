@@ -56,10 +56,10 @@ end
 -- waits until enter key is pressed, ignoring all other input
 function getenter()
 	local cur = nc.getch()
-	nc.printw("" .. cur)
+	-- nc.printw("" .. cur)
 	while not (cur == string.byte("\n") or cur == 127) do
 		cur = nc.getch()
-		nc.printw("" .. cur)
+		-- nc.printw("" .. cur)
 	end
 	if cur == 127 then
 		nc.printw("backspace!")
@@ -177,7 +177,7 @@ function getcmdwords(curcommand)
 			-- for j,v in ipairs(curspot) do
 			-- 	print(j,v.name,"\n")
 			-- end
-			-- return {}, false, "", true
+			return {}, false, "", true
 		end
 	end
 	local returnwords = {}
