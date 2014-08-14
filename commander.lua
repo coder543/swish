@@ -52,6 +52,7 @@ function init()
 		createArg("stat", "status of the internet", {}),
 		createArg("enable", "enable the internet", {}),
 		createArg("shut", "shutdown the internet", {}),
+		createArg("send", "send the IPs", {}),
 		createArg("set", "set the internet's IP address", {
 			createArg("<number>", "an IP address", {})
 		})

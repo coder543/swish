@@ -27,32 +27,6 @@ function init()
 	-- walktree(commander.commands, "--")
 end
 
--- utility functions to walk a tree of commands
--- function walkargtree(tree, marker)
--- 	if next(tree) == nil then 
--- 		return
--- 	end
--- 	print(marker:sub(1, -3) .. " table:")
--- 	for k,v in pairs(tree) do
--- 		if type(v) == "table" then
--- 			-- print(marker .. " " .. "table:")
--- 			walkargtree(v, marker .. "--")
--- 		else
--- 			print(marker .. " " .. k .. " " .. v)
--- 		end
--- 	end
--- end
-
--- function walktree(tree, marker)
--- 	for i,v in ipairs(tree) do
--- 		print(marker .. " name" .. " " .. v.name)
--- 		print(marker .. " description" .. " " .. v.description)
--- 		print(marker .. " func" .. " " .. tostring(v.func))
--- 		-- print(marker .. " args" .. " " .. "table:")
--- 		walkargtree(v.args, marker .. "--")
--- 	end
--- end
-
 -- waits until enter key is pressed, ignoring all other input
 function getenter()
 	local cur = nc.getch()
@@ -329,3 +303,28 @@ init() -- call the init function
 inputloop() -- then do an input loop while the user has input to give
 cleanup() -- then cleanup
 
+-- utility functions to walk a tree of commands
+-- function walkargtree(tree, marker)
+-- 	if next(tree) == nil then 
+-- 		return
+-- 	end
+-- 	print(marker:sub(1, -3) .. " table:")
+-- 	for k,v in pairs(tree) do
+-- 		if type(v) == "table" then
+-- 			-- print(marker .. " " .. "table:")
+-- 			walkargtree(v, marker .. "--")
+-- 		else
+-- 			print(marker .. " " .. k .. " " .. v)
+-- 		end
+-- 	end
+-- end
+
+-- function walktree(tree, marker)
+-- 	for i,v in ipairs(tree) do
+-- 		print(marker .. " name" .. " " .. v.name)
+-- 		print(marker .. " description" .. " " .. v.description)
+-- 		print(marker .. " func" .. " " .. tostring(v.func))
+-- 		-- print(marker .. " args" .. " " .. "table:")
+-- 		walkargtree(v.args, marker .. "--")
+-- 	end
+-- end
