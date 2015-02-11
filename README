@@ -1,4 +1,7 @@
-Right now, swish just autocompletes based on three words: "hello," "extreme," and "exit." exit is the only word that has any impact on the program.
+Swish needs to be run with LuaJIT on a system that has libncurses available.
 
+This is designed to demonstrate an ideal shell -- in a world where you know all available commands and completions, you can do wonderful things for usability of a terminal interface.
 
-The full command tree is being generated, but it needs to be implemented in the inputloop.
+KNOWN BUGS:
+if you backspace too far, it will crash.
+if you enter a free-input region (like text or numbers) things break, but it still demos reasonably well.
